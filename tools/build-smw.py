@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Empacota o RetroArch Tizen existente com Snes9x e a ROM local do usuário."""
 
+import argparse
+import hashlib
 import io
 import json
 import os
@@ -72,10 +74,31 @@ def smaller_initial_memory(data):
 
 
 def main():
-    rom = ROOT / "roms/SMW-PTBR-2.0.sfc"
+    global CORE
+    parser = argparse.ArgumentParser(description="Empacota uma ROM SNES local; assinatura opcional.")
+    parser.add_argument("--rom", type=Path, default=ROOT / "roms/SMW-PTBR-2.0.sfc")
+    parser.add_argument("--name", default="Meu jogo SNES")
+    parser.add_argument("--core", choices=["snes9x", "snes9x2010", "snes9x2005"], default=CORE)
+    parser.add_argument("--initial-memory", type=int, choices=[32, 128], default=32)
+    parser.add_argument("--unsigned", action="store_true", help="Não executa assinador externo")
+    parser.add_argument("--output", type=Path, default=ROOT / "artifacts/SuperNintendo-SMW-PTBR.wgt")
+    args = parser.parse_args()
+    CORE = args.core
+    rom = args.rom.expanduser()
+    if not args.unsigned and not all(os.environ.get(key) for key in ("TIZEN_CERT_DIR", "TIZEN_SDB")):
+        parser.error("Configure TIZEN_CERT_DIR e TIZEN_SDB ou use --unsigned para assinar por outra ferramenta.")
     if not rom.is_file():
-        raise SystemExit("Falta roms/SMW-PTBR-2.0.sfc, fornecida pelo usuário.")
+        raise SystemExit(f"ROM não encontrada: {rom}")
+    if rom.suffix.lower() not in {".sfc", ".smc"} or not rom.stat().st_size:
+        parser.error("Use uma ROM SNES extraída, não vazia, com extensão .sfc ou .smc.")
+    rom_data = rom.read_bytes()
+    rom_filename = "game-" + hashlib.sha256(rom_data).hexdigest()[:12] + ".sfc"
     original = ROOT / "artifacts/RetroArch-v0.3.2.wgt"
+    original.parent.mkdir(parents=True, exist_ok=True)
+    if not original.exists():
+        url = "https://github.com/Sype0/retroarch-tizen/releases/download/v0.3.2/RetroArch.wgt"
+        with urllib.request.urlopen(url, timeout=60) as response:
+            original.write_bytes(response.read())
     with zipfile.ZipFile(original) as source:
         files = {name: source.read(name) for name in source.namelist()
                  if not name.endswith("/") and not name.endswith("signature.xml")}
@@ -96,17 +119,18 @@ def main():
     script = replace_once(script, 'mkdirp(FS, RA_HOME + "/userdata");', """mkdirp(FS, RA_HOME + "/userdata");
          mkdirp(FS, RA_HOME + "/userdata/saves");
          mkdirp(FS, RA_HOME + "/userdata/states");""")
-    files["app.js"] = script.encode()
+    files["app.js"] = script.replace("SMW-PTBR-2.0.sfc", rom_filename).replace("Carregando SMW PT-BR", "Carregando jogo").encode()
     files["cores.js"] = ("var RA_CORES = " + json.dumps([
-        {"id": CORE, "name": "SMW PT-BR", "emu": "Super Nintendo",
+        {"id": CORE, "name": args.name, "emu": "Super Nintendo",
          "ext": ["sfc", "smc"]}], ensure_ascii=False) + ";\n").encode()
     files["config.xml"] = files["config.xml"].replace(b'version="0.3.2"', b'version="0.3.4"').replace(b"<name>RetroArch</name>", b"<name>Super Nintendo</name>")
     files["index.html"] = files["index.html"].replace(b"RetroArch for Tizen", b"Super Nintendo").replace(b"<h1>RetroArch</h1>", b"<h1>Super Nintendo</h1>").replace(b"Choose a system", b"Escolha o jogo").replace(b"Remote keys", b"Controles")
     files["style.css"] += b"\n#canvas{width:1280px!important;height:720px!important;transform:scale(1.5);transform-origin:0 0;}\n"
-    files["roms/SMW-PTBR-2.0.sfc"] = rom.read_bytes()
+    files["roms/" + rom_filename] = rom_data
     for name in [f"cores/{CORE}_libretro.wasm", f"cores/{CORE}_libretro.js"]:
         files[name] = asset(name)
-    files[f"cores/{CORE}_libretro.wasm"] = smaller_initial_memory(files[f"cores/{CORE}_libretro.wasm"])
+    if args.initial_memory == 32:
+        files[f"cores/{CORE}_libretro.wasm"] = smaller_initial_memory(files[f"cores/{CORE}_libretro.wasm"])
 
     # RGUI, fontes, controles e informação do único core; nenhum shader ou filtro.
     bundle = io.BytesIO()
@@ -119,10 +143,14 @@ def main():
                                     f"bundle/info/{CORE}_libretro.info"}):
                     target.writestr(name, source.read(name))
     files["assets/frontend/bundle.zip"] = bundle.getvalue()
-    output = ROOT / "artifacts/SuperNintendo-SMW-PTBR.wgt"
+    output = args.output.expanduser()
+    output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as package:
         for name, data in files.items():
             package.writestr(name, data)
+    if args.unsigned:
+        print(f"Gerado SEM assinatura: {output}. Assine antes de instalar.")
+        return
     cert = Path(os.environ["TIZEN_CERT_DIR"]).expanduser()
     password = (cert / "password.txt").read_text().strip()
     sdb = Path(os.environ["TIZEN_SDB"]).expanduser()

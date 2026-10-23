@@ -1,118 +1,93 @@
 <div align="center">
 
-# Super Nintendo na TV Samsung
+![Samsung Games — jogos retrô, direto na TV](assets/retro-tv.svg)
 
-**Emulação local de Super Nintendo em uma Samsung QN50Q60C com Tizen 9.**
+# Seu videogame retrô pode estar na sua TV
 
-ROM fornecida pelo usuário · jogo sem PC ligado · pacote com recursos locais
+**Um ponto de partida para instalar e ajustar emuladores em TVs Samsung com Tizen.**
 
-![Versão do projeto](https://img.shields.io/badge/projeto-0.1.0-6f42c1)
-![Plataforma](https://img.shields.io/badge/TV-Tizen%209-1428A0)
-![Estado](https://img.shields.io/badge/estado-prot%C3%B3tipo%20medido-orange)
-
-[Começar pelo passo a passo](#reproduzir-o-projeto) · [Usar prompt de IA](prompts/INSTALAR-NA-MINHA-TV.md) · [Ver medições](docs/RESULTADOS.md)
+[Quero usar uma IA](prompts/INSTALAR-NA-MINHA-TV.md) · [Quero fazer por conta própria](docs/INSTALACAO.md) · [Quero ver os testes](docs/RESULTADOS.md)
 
 </div>
 
----
+A ideia começou com uma pergunta: dá para jogar Super Nintendo na TV sem deixar o computador ligado? Na nossa Samsung Q60C, deu. Empacotamos o emulador com os arquivos locais, ajustamos o uso de memória e colocamos um jogo para rodar com imagem e som.
 
-Este repositório registra uma prova real na TV autorizada: **Super Nintendo 0.3.4**, baseada no [RetroArch Tizen](https://github.com/Sype0/retroarch-tizen), com core Snes9x 2010 e SMW PT-BR 2.0. A ROM foi fornecida pelo usuário. A imagem e o som foram confirmados na TV; o teste chegou a 60,05 FPS num trecho curto.
+Agora queremos encurtar esse caminho para quem chegar aqui com **outra TV, outro jogo ou outro emulador**. Este repositório reúne o que funcionou, scripts para reproduzir o teste e um prompt que ajuda uma IA a adaptar o processo ao seu aparelho. Você não precisa ter nossos arquivos pessoais, Obsidian, root ou ferramentas previamente instaladas para começar.
 
-O pacote carrega jogo, core e recursos da própria TV. Depois da instalação, não precisa de PC nem de servidor web durante o jogo. O projeto ainda é um protótipo: controle físico, reinício da TV, sessões longas e outros jogos precisam de validação.
+> **A proposta é atender TVs Samsung com Tizen; a compatibilidade precisa ser conferida em cada aparelho.** O teste físico registrado é de uma QN50Q60C com Tizen 9. TVs antigas, inclusive Samsung anteriores ao Tizen, podem precisar de outro caminho ou não suportar este runtime.
 
-> **Atalho:** quer que uma IA conduza a instalação na sua TV? Abra [`prompts/INSTALAR-NA-MINHA-TV.md`](prompts/INSTALAR-NA-MINHA-TV.md), copie o prompt inteiro e cole na IA que tem acesso ao seu computador. O fluxo manda identificar sua TV, ler suas notas locais, comparar opções, medir e instalar com reversão anotada.
+## Escolha como começar
 
-## Escolha do caminho
+### “Quero colar um prompt e deixar a IA me ajudar”
+
+Abra o **[prompt pronto para copiar](prompts/INSTALAR-NA-MINHA-TV.md)**. Ele já contém o endereço deste repositório, as fontes das ferramentas e um fluxo de decisão. A IA começa pelo modelo da sua TV e pelo sistema do seu computador, obtém o que falta e só então propõe a instalação.
+
+Ela pode precisar de você para ativar o modo de desenvolvedor, entrar na sua conta Samsung, conectar um controle ou confirmar o que aparece na tela. O prompt não depende de notas pessoais e não manda fazer root na TV.
+
+### “Quero entender e montar eu mesmo”
+
+Siga o **[guia de instalação](docs/INSTALACAO.md)**. Ele começa do zero: onde baixar as ferramentas, como escolher entre o app original e o pacote local, como assinar e instalar e como desfazer.
 
 ```mermaid
-flowchart TD
-    A[Identificar modelo e sistema da TV] --> B[Ler conhecimento local e limites]
-    B --> C{Emulacao local cabe nos recursos?}
-    C -->|Sim| D[Preparar ROM fornecida pelo usuario]
-    C -->|Nao| E[Medir candidatas: WGT, web local, port nativo]
-    E --> F{Alguma candidata atende ao uso?}
-    F -->|Nao| G[Parar e apresentar limites medidos]
-    F -->|Sim| D
-    D --> H[Empacotar e assinar no computador]
-    H --> I[Confirmar modelo e instalar na TV autorizada]
-    I --> J[Validar imagem, som, controle, saves e consumo]
-    J --> K[Anotar remocao e resultado]
+flowchart LR
+    A[Modelo da TV e sistema do PC] --> B{Tizen e runtime compatíveis?}
+    B -->|Sim| C[Escolher emulador e obter ferramentas]
+    B -->|Não| D[Ver alternativa ou explicar limite]
+    C --> E[Testar com seu jogo]
+    E --> F[Ajustar somente se necessário]
+    F --> G[Validar controle, áudio, saves e offline]
 ```
 
-## O que está aqui
+## Não fica preso ao Mario — nem ao SNES
 
-| Caminho | Para que serve |
+SMW PT-BR foi o jogo usado para a primeira prova. Você pode usar outra ROM de SNES no empacotador, sem tradução obrigatória. E o projeto não se resume ao RetroArch: o objetivo é ajudar a escolher e adaptar emuladores que façam sentido para cada TV.
+
+O [RetroArch Tizen original](https://github.com/Sype0/retroarch-tizen) já apresenta cores para NES, SNES, Game Boy, Mega Drive, PlayStation e outros sistemas. Isso amplia as possibilidades, mas não significa que todos rodem bem em qualquer TV. Cada core tem requisitos e desempenho próprios; jogos 3D e ROMs grandes exigem atenção especial.
+
+**O script deste repositório empacota atualmente SNES**, com três opções de core. Outros sistemas podem ser explorados pelo app original ou por uma adaptação do código. Outros emuladores independentes precisam de avaliação de compatibilidade; não foram testados aqui. Streaming, como Moonlight, também é uma opção de uso, mas exige outra máquina executando o jogo.
+
+## O ajuste que fez diferença
+
+Só baixar a resolução não resolveu nosso limite: os cores testados mostravam cerca de 39–42 FPS no contador. Com Snes9x 2010, reduzimos a **memória WASM inicial de 128 para 32 MiB**, mantendo crescimento automático. O heap cresceu para aproximadamente 38,4 MiB, e uma captura do mesmo jogo marcou **60,05 FPS**.
+
+Não é um “modo turbo” universal. É um ajuste pequeno no empacotamento que valeu medir naquela TV. O script oferece `--initial-memory 128` para comparar com o valor original e recusa o patch se o layout esperado mudar. Mantivemos as [medições e suas limitações](docs/RESULTADOS.md) para quem quiser avaliar a escolha.
+
+| O que conseguimos verificar | O que ainda falta |
 |---|---|
-| [`tools/prepare-rom.sh`](tools/prepare-rom.sh) | Aplica um patch BPS a uma ROM original que você já possui. |
-| [`tools/build-smw.py`](tools/build-smw.py) | Monta e assina o WGT com core, recursos e ROM locais. |
-| [`prompts/INSTALAR-NA-MINHA-TV.md`](prompts/INSTALAR-NA-MINHA-TV.md) | Prompt pronto para outra IA conduzir descoberta, medição e instalação. |
-| [`docs/RESULTADOS.md`](docs/RESULTADOS.md) | Hardware, candidatas, medições, validações e limites conhecidos. |
-| [`docs/INSTALACAO.md`](docs/INSTALACAO.md) | Preparação, montagem, instalação, validação e remoção. |
+| Imagem e áudio confirmados na Q60C | Controle físico e mapeamento dos botões |
+| Carregamento com a rede do app bloqueada | Reinício físico da TV e sessão prolongada |
+| SRAM e savestate persistentes após reabertura | Outros modelos, jogos e sistemas |
 
-## Palavras-chave
+## Um exemplo com o seu jogo
 
-Samsung Smart TV, Samsung Tizen, Tizen 9, Tizen TV emulator, emulador SNES para TV Samsung, Super Nintendo na TV, RetroArch Tizen, libretro WASM, WebAssembly emulator, Snes9x 2010, instalar WGT na Samsung TV, jogos retrô sem PC, QN50Q60CAGXZD, homebrew Tizen.
-
-ROMs, patches, WGTs, executáveis, certificados e capturas de teste ficam fora do Git. O `.gitignore` protege esses arquivos locais.
-
-## Reproduzir o projeto
-
-### 1. Confira o ambiente
-
-Esta versão foi medida na **QN50Q60CAGXZD**, plataforma `23_NKL_UHD_T09`, Tizen 9, firmware `T-NKLCUABC-0090-2220.4`. Outras TVs podem ter recursos, sistema, resolução e instalação diferentes. Primeiro confirme o modelo; não opere uma TV de outra pessoa.
-
-No computador, este projeto usa Python 3, Floating IPS (`flips`), o WGT de base e um perfil de assinatura Tizen já configurado. A montagem baixa os recursos públicos do RetroArch Tizen se eles ainda não existirem no cache local.
-
-### 2. Obtenha os arquivos de entrada
-
-Crie as pastas locais. Baixe o WGT de base da release v0.3.2 do projeto original e use somente jogos e patches que você tem direito de usar:
+Depois de instalar [Git](https://git-scm.com/downloads) e [Python 3](https://www.python.org/downloads/):
 
 ```bash
-mkdir -p artifacts .work
-curl -fL \
-  https://github.com/Sype0/retroarch-tizen/releases/download/v0.3.2/RetroArch.wgt \
-  -o artifacts/RetroArch-v0.3.2.wgt
+git clone https://github.com/leandroxse/samsung-games.git
+cd samsung-games
+python3 tools/build-smw.py --rom "/caminho/Meu jogo.sfc" --name "Meu jogo" --unsigned
 ```
 
-Coloque sua ROM original e patch BPS nos caminhos que serão passados ao preparador. O projeto não fornece nem baixa ROM ou BIOS.
+No Windows, use `py -3` se o comando `python3` não existir. O script baixa o WGT base e os recursos públicos ausentes. A saída fica em `artifacts/SuperNintendo-SMW-PTBR.wgt` por compatibilidade com o primeiro teste; você pode escolher outro caminho com `--output`.
 
-### 3. Prepare a ROM traduzida
+**Esse comando gera um pacote sem assinatura.** Ainda é preciso assinar com um certificado aceito pela sua TV e instalar. O [guia completo](docs/INSTALACAO.md) explica de onde vêm essas ferramentas. Nenhuma TV é acessada pelo script de build.
 
-Instale ou compile Floating IPS v198 para seu computador e deixe `flips` disponível no `PATH`. Depois aplique o patch:
+## O que você encontra aqui
 
-```bash
-tools/prepare-rom.sh \
-  "/caminho/para/Super Mario World (USA).sfc" \
-  "/caminho/para/SMW-PTBR-2.0.bps"
-```
+| Arquivo | Uso |
+|---|---|
+| [Prompt para IA](prompts/INSTALAR-NA-MINHA-TV.md) | Começar sem conhecer a nossa instalação |
+| [Guia de instalação](docs/INSTALACAO.md) | Preparar ferramentas, empacotar, assinar e instalar |
+| [Resultados](docs/RESULTADOS.md) | Consultar hardware, escolhas, medições e pendências |
+| [Empacotador Python](tools/build-smw.py) | Escolher ROM, título, core e memória inicial |
+| [Preparador de tradução](tools/prepare-rom.sh) | Aplicar o BPS de SMW, caso você queira reproduzir esse exemplo |
 
-O script grava `roms/SMW-PTBR-2.0.sfc`. Floating IPS confere se a ROM de entrada corresponde ao patch. Se a conferência falhar, pare e confira os arquivos; não force o patch.
+## Créditos e uso das imagens
 
-### 4. Monte e assine o aplicativo
+Este trabalho se apoia em [RetroArch Tizen, de Sype0](https://github.com/Sype0/retroarch-tizen), [RetroArch/libretro](https://github.com/libretro/RetroArch) e [Snes9x 2010](https://github.com/libretro/snes9x2010). Consulte e preserve as licenças de cada componente antes de redistribuí-lo. A tradução usada no teste foi SMW PT-BR 2.0, atribuída a BMatSantos no material fornecido pelo usuário.
 
-Informe o caminho do utilitário `tizen-sdb` e da pasta do seu perfil privado de assinatura. A pasta deve conter `author.p12`, `distributor.p12` e `password.txt`. O script lê a senha sem imprimi-la:
+A ilustração do topo foi criada para este repositório: não usa personagens, capturas de jogos nem logotipos oficiais. **Somente essa ilustração, `assets/retro-tv.svg`, é disponibilizada sob [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)**. Não há afiliação com Samsung, Nintendo ou o time libretro.
 
-```bash
-export TIZEN_SDB="$HOME/TizenTube/tools/tizen-sdb"
-export TIZEN_CERT_DIR="/caminho/para/seu/perfil-de-assinatura"
-python3 tools/build-smw.py
-```
+ROMs, BIOS, certificados, saves e pacotes com jogos ficam fora do Git. Use arquivos que você tem direito de usar.
 
-O WGT final aparece em `artifacts/SuperNintendo-SMW-PTBR.wgt`. O script adapta o carregador, inclui só o core Snes9x 2010 e recursos necessários, reduz a memória WASM inicial de 128 para 32 MiB mantendo crescimento automático e assina o pacote. Veja [como o teste foi medido](docs/RESULTADOS.md#ajuste-de-memoria-e-desempenho).
-
-### 5. Instale e valide na TV
-
-Use o instalador Tizen já configurado para sua rede. Antes de instalar, redescubra o IP e confirme o modelo pela API da TV. Na Q60C testada, a instalação foi feita pelo SDB local da própria TV com apoio do Vetro existente; isso evitou alterar IP, rotas ou firewall do computador.
-
-Confirme que o app aparece em primeiro plano. Abra SMW PT-BR e confira imagem, som, controle e salvamento. A instalação foi testada offline após o carregamento do app; Wi-Fi da TV não foi desligado.
-
-O roteiro específico, a reversão e a proteção de saves estão em [`docs/INSTALACAO.md`](docs/INSTALACAO.md). Anote sempre o ID do pacote e o comando de remoção antes de instalar.
-
-## Créditos e licenças
-
-- [RetroArch Tizen](https://github.com/Sype0/retroarch-tizen): interface e integração Tizen; consulte a licença do projeto original.
-- [RetroArch / libretro](https://github.com/libretro/RetroArch) e [Snes9x 2010](https://github.com/libretro/snes9x2010): frontend e core; preserve as licenças e avisos próprios ao redistribuir binários.
-- Floating IPS v198: aplicação local de patch BPS.
-- SMW PT-BR 2.0: patch de tradução BPS fornecido pelo usuário, atribuído no material de origem a BMatSantos.
-
-Este repositório não redistribui jogo, BIOS, WGT assinado, executáveis nem certificados. Consulte as licenças originais antes de redistribuir componentes de terceiros.
+<sub>Para encontrar este projeto: Samsung Smart TV emulator · emulador para Samsung Tizen · RetroArch Tizen · SNES · NES · Mega Drive · libretro · WebAssembly · WGT · jogos retrô sem PC.</sub>
