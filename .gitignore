@@ -1,0 +1,8 @@
+.work/
+artifacts/
+roms/
+dist/
+*.wgt
+*.wasm
+*.sfc
+*.smc
